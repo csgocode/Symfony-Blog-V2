@@ -5,6 +5,7 @@ namespace App\Controller;
 use Symfony\Component\Filesystem\Filesystem;
 use App\Entity\Comment;
 use App\Entity\Post;
+use App\Entity\Like;
 use App\Form\CommentFormType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use App\Form\PostFormType;
@@ -14,16 +15,38 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
 class BlogController extends AbstractController
 {
     #[Route("/blog/buscar/{page}", name: 'blog_buscar')]
-    public function buscar(ManagerRegistry $doctrine,  Request $request, int $page = 1): Response
+    public function buscar(ManagerRegistry $doctrine, Request $request, int $page = 1)
     {
-       return new Response("Buscar");
-    } 
+        $searchTerm = $request->query->get('searchTerm', '');
+
+        $em = $doctrine->getManager();
+
+        // Configuración de la paginación
+        $limit = 10;
+        $offset = ($page - 1) * $limit;
+
+        // Construir la consulta con Query Builder
+        $query = $em->getRepository(Post::class)->createQueryBuilder('p')
+                    ->where('p.Title LIKE :searchTerm OR p.Content LIKE :searchTerm')
+                    ->setParameter('searchTerm', '%' . $searchTerm . '%')
+                    ->setFirstResult($offset)
+                    ->setMaxResults($limit)
+                    ->getQuery();
+
+        $posts = $query->getResult();
+
+        return $this->render('blog/blog.html.twig', [
+            'posts' => $posts
+        ]);
+    }
+
    
     #[Route("/blog/new", name: 'new_post')]
     public function newPost(ManagerRegistry $doctrine, Request $request, SluggerInterface $slugger): Response
@@ -66,10 +89,51 @@ class BlogController extends AbstractController
     
     
     #[Route("/single_post/{slug}/like", name: 'post_like')]
-    public function like(ManagerRegistry $doctrine, $slug): Response
+    public function like(ManagerRegistry $doctrine, $slug, Security $security): Response
     {
-        return new Response("like");
+        $em = $doctrine->getManager();
+    
+        // Usar Query Builder para encontrar el post
+        $post = $em->getRepository(Post::class)->createQueryBuilder('p')
+           ->where('p.Slug = :slug')
+           ->setParameter('slug', $slug)
+           ->setMaxResults(1)
+           ->getQuery()
+           ->getOneOrNullResult();
 
+    
+        if (!$post) {
+            // Manejar el caso en que el post no se encuentre
+            return new Response('Post not found', Response::HTTP_NOT_FOUND);
+        }
+    
+        $user = $security->getUser();
+    
+        // Verificar si el usuario ya dio like
+        $existingLike = $em->getRepository(Like::class)->findOneBy([
+            'post' => $post,
+            'user' => $user
+        ]);
+    
+        if (!$existingLike) {
+            $like = new Like();
+            $like->setUser($user);
+            $like->setPost($post);
+    
+            $em->persist($like);
+    
+            // Incrementar NumLikes
+            $currentLikes = $post->getNumLikes();
+            $post->setNumLikes($currentLikes + 1);
+    
+            $em->flush();
+            return new Response("Has dado like a la publicación.");
+        } else {
+            return new Response("No puedes dar más de 1 like.");
+
+        }
+    
+        
     }
 
     #[Route("/blog", name: 'blog')]

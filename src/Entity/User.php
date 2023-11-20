@@ -34,6 +34,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?string $password = null;
 
+    #[ORM\OneToMany(targetEntity: Like::class, mappedBy: 'user')]
+    private $likes;
+    
+    public function getLikes(): Collection
+    {
+        return $this->likes;
+    }
+
+
+
     #[ORM\OneToMany(mappedBy: 'User', targetEntity: Post::class)]
     private Collection $posts;
 
