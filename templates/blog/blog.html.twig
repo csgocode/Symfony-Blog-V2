@@ -50,11 +50,9 @@
              </div>
              <div class="panel-body">
                <ul class="nav">
-                 <li><a href="#">Category I</a></li>
-                 <li><a href="#">Category II</a></li>
-                 <li><a href="#">Category III</a></li>
-                 <li><a href="#">Category IV</a></li>
-                 <li class="last"><a href="#">Category V</a></li>
+					{% for category in categories %}
+                 <li><a href="/#category{{category.id}}">	{{ category.name }}</a></li>
+          {% endfor %}
                </ul>
              </div>
            </div>
@@ -64,32 +62,24 @@
            </div>
             <h3>Recent Posts</h3>
             <hr>
+            {% for recent in recents %}
              <div class="post">
                <div class="post-heading">
-                 <span>10 APRIL</span>
-                 <img class="img-responsive" src="images/blog/wedding.jpg" alt="post's picture">
+                 <span>{{ recent.publishedAt | date('d') }} {{ recent.publishedAt | date('F') }}</span>
+                 <img class="img-responsive" src="/images/blog/{{recent.image}}" alt="{{recent.slug}}">
                </div>
                <div class="post-body">
                  <span>
-                 <i class="fa fa-heart sr-icons"></i> 10
-                 <i class="fa fa-comments sr-icons"></i> 10
+                 <i class="fa fa-heart sr-icons"></i> {{recent.numLikes}}
+                 <i class="fa fa-comments sr-icons"></i> {{recent.numComments}}
                  </span>
-                 <h4 class="text-left"><a href=""><strong>Aliquam soluta</strong></a></h4>
+                 <h4 class="text-left"><a href="/single_post/{{recent.slug}}"><strong>{{recent.slug}}</strong></a></h4>
                </div>
              </div>
-             <div class="post">
-               <div class="post-heading">
-                 <span>12 MAY</span>
-                 <img class="img-responsive" src="images/blog/woman.jpg" alt="post's picture">
-               </div>
-               <div class="post-body">
-                 <span>
-                 <i class="fa fa-heart sr-icons"></i> 10
-                 <i class="fa fa-comments sr-icons"></i> 10
-                 </span>
-                 <h4 class="text-left"><a href=""><strong>Consequuntur</strong></a></h4>
-               </div>
-             </div>
+             {% endfor %}
+
+
+
         </div>
       <!-- End of Side bar --> 
   

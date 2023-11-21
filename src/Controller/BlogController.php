@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Category;
 use Symfony\Component\Filesystem\Filesystem;
 use App\Entity\Comment;
 use App\Entity\Post;
@@ -24,7 +25,11 @@ class BlogController extends AbstractController
     #[Route("/blog/buscar/{page}", name: 'blog_buscar')]
     public function buscar(ManagerRegistry $doctrine, Request $request, int $page = 1)
     {
+        $repository = $doctrine->getRepository(Post::class);
         $searchTerm = $request->query->get('searchTerm', '');
+        $repositoryCategories = $doctrine->getRepository(Category::class);
+        $category = $repositoryCategories->findAll();
+        $recents = $repository->findRecents();
 
         $em = $doctrine->getManager();
 
@@ -43,7 +48,9 @@ class BlogController extends AbstractController
         $posts = $query->getResult();
 
         return $this->render('blog/blog.html.twig', [
-            'posts' => $posts
+            'posts' => $posts,
+            'categories' => $category,
+            'recents' => $recents,
         ]);
     }
 
@@ -104,7 +111,7 @@ class BlogController extends AbstractController
     
         if (!$post) {
             // Manejar el caso en que el post no se encuentre
-            return new Response('Post not found', Response::HTTP_NOT_FOUND);
+            return new Response('Post no encontrado', Response::HTTP_NOT_FOUND);
         }
     
         $user = $security->getUser();
@@ -141,9 +148,14 @@ class BlogController extends AbstractController
     {
         $repository = $doctrine->getRepository(Post::class);
         $posts = $repository->findAll();
+        $recents = $repository->findRecents();
+        $repositoryCategories = $doctrine->getRepository(Category::class);
+        $category = $repositoryCategories->findAll();
         
         return $this->render('blog/blog.html.twig', [
             'posts' => $posts,
+            'recents' => $recents,
+            'categories' => $category,
         ]);
     }
 
@@ -165,6 +177,7 @@ class BlogController extends AbstractController
         $comment->setPost($post);
 
         $entityManager = $doctrine->getManager();
+        
         $entityManager->persist($comment);
         $entityManager->flush();
     }
